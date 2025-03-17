@@ -150,7 +150,6 @@ export default function EligibilityResultPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
       <div className="container mx-auto p-6">
         <div className="mb-6">
           <Link href="/dashboard" className="text-blue-600 hover:text-blue-800 flex items-center">
@@ -357,7 +356,6 @@ export default function EligibilityResultPage() {
           </div>
         </div>
       </div>
-      <Footer />
     </div>
   );
 }

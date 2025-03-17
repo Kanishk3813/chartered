@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import Footer from '@/components/layout/Footer';
 
 type LoanType = 'personal' | 'home' | 'education' | 'business' | 'vehicle';
 
@@ -209,7 +208,6 @@ export default function LoanApplicationPage() {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

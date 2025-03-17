@@ -4,8 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
 
 type LoanType = 'personal' | 'home' | 'education' | 'business' | 'vehicle';
 
@@ -85,7 +83,6 @@ export default function LoanApplicationPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Header />
       <main className="flex-grow container mx-auto px-4 py-8">
         <div className="max-w-5xl mx-auto">
           <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8">
@@ -211,7 +208,6 @@ export default function LoanApplicationPage() {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

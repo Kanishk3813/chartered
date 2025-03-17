@@ -13,7 +13,7 @@ export default function Home() {
             </h1>
             <p className="text-lg text-gray-700 mb-8">
               Apply for loans through interactive video conversations. No forms, no waiting in lines.
-              Just you and your AI Branch Manager working together to find the perfect loan solution.
+              Just you and your AI Branch Manager working together to find the perfect loan solution.&apos;
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Link 
