@@ -8,6 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "encoding": "^0.1.13",
     "face-api.js": "^0.22.2",
     "next": "15.2.2",
     "react": "^19.0.0",
