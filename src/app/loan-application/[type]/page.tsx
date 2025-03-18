@@ -1,198 +1,241 @@
+// src/app/loan-application/[type]/page.tsx
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Image from 'next/image';
-import Link from 'next/link';
+import { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import VideoRecorder from '@/components/video/VideoRecorder';
+import VideoPlayer from '@/components/video/VideoPlayer';
 
-type LoanType = 'personal' | 'home' | 'education' | 'business' | 'vehicle';
+// Define loan type data mapping
+const loanTypeData = {
+  personal: {
+    title: 'Personal Loan',
+    introVideo: '/videos/personal-loan-intro.mp4',
+    welcomeMessage: 'Welcome to your Personal Loan application. I\'ll guide you through the verification process.',
+    questions: [
+      'Please hold your ID card clearly in front of the camera for verification.',
+      'Please state your full name and the purpose of this personal loan.',
+      'Could you confirm your monthly income and existing financial commitments?'
+    ]
+  },
+  home: {
+    title: 'Home Loan',
+    introVideo: '/videos/home-loan-intro.mp4',
+    welcomeMessage: 'Welcome to your Home Loan application. Let\'s verify your details to proceed with your property purchase.',
+    questions: [
+      'Please hold your ID card clearly in front of the camera for verification.',
+      'Please show the property documents or details of the property you wish to purchase.',
+      'Could you confirm your employment status and duration at your current workplace?'
+    ]
+  },
+  education: {
+    title: 'Education Loan',
+    introVideo: '/videos/education-loan-intro.mp4',
+    welcomeMessage: 'Welcome to your Education Loan application. I\'ll help you secure funding for your educational journey.',
+    questions: [
+      'Please hold your ID card clearly in front of the camera for verification.',
+      'Please show your admission letter or course details document.',
+      'Could you share details about the institution and course duration?'
+    ]
+  },
+  business: {
+    title: 'Business Loan',
+    introVideo: '/videos/business-loan-intro.mp4',
+    welcomeMessage: 'Welcome to your Business Loan application. Let\'s get your business the funding it needs.',
+    questions: [
+      'Please hold your ID card clearly in front of the camera for verification.',
+      'Please show your business registration documents or license.',
+      'Could you share information about your business revenue and growth plans?'
+    ]
+  },
+  vehicle: {
+    title: 'Vehicle Loan',
+    introVideo: '/videos/vehicle-loan-intro.mp4',
+    welcomeMessage: 'Welcome to your Vehicle Loan application. I\'ll help you get on the road with your new vehicle.',
+    questions: [
+      'Please hold your ID card clearly in front of the camera for verification.',
+      'Please show the vehicle quotation or details of the vehicle you wish to purchase.',
+      'Could you confirm your driving license details?'
+    ]
+  }
+};
 
-interface LoanOption {
-  type: LoanType;
-  title: string;
-  description: string;
-  minAmount: number;
-  maxAmount: number;
-  interestRate: string;
-  imageSrc: string;
-  commonUses: string[];
-}
-
-export default function LoanApplicationPage() {
+export default function LoanVerificationPage() {
+  const params = useParams();
   const router = useRouter();
-  const [selectedLoan, setSelectedLoan] = useState<LoanType | null>(null);
-
-  const loanOptions: LoanOption[] = [
-    {
-      type: 'personal',
-      title: 'Personal Loan',
-      description: 'Quick funding for your personal needs with minimal documentation',
-      minAmount: 50000,
-      maxAmount: 1500000,
-      interestRate: '10.50% - 18.00%',
-      imageSrc: '/images/loans/personal-loan.jpg',
-      commonUses: ['Medical expenses', 'Wedding expenses', 'Home renovation', 'Travel', 'Education']
-    },
-    {
-      type: 'home',
-      title: 'Home Loan',
-      description: 'Fulfill your dream of owning a home with our affordable home loans',
-      minAmount: 500000,
-      maxAmount: 10000000,
-      interestRate: '8.25% - 9.75%',
-      imageSrc: '/images/loans/home-loan.jpg',
-      commonUses: ['Purchase new property', 'Construction', 'Renovation', 'Land purchase', 'Balance transfer']
-    },
-    {
-      type: 'education',
-      title: 'Education Loan',
-      description: 'Invest in your future with our education loans for studies in India and abroad',
-      minAmount: 100000,
-      maxAmount: 5000000,
-      interestRate: '9.00% - 12.50%',
-      imageSrc: '/images/loans/education-loan.jpg',
-      commonUses: ['Tuition fees', 'Accommodation', 'Books & equipment', 'Travel expenses', 'Examination fees']
-    },
-    {
-      type: 'business',
-      title: 'Business Loan',
-      description: 'Grow your business with flexible funding options and competitive rates',
-      minAmount: 200000,
-      maxAmount: 7500000,
-      interestRate: '12.00% - 16.00%',
-      imageSrc: '/images/loans/business-loan.jpg',
-      commonUses: ['Working capital', 'Equipment purchase', 'Expansion', 'Inventory management', 'Marketing']
-    },
-    {
-      type: 'vehicle',
-      title: 'Vehicle Loan',
-      description: 'Drive home your dream car with hassle-free vehicle financing',
-      minAmount: 100000,
-      maxAmount: 2500000,
-      interestRate: '9.50% - 12.00%',
-      imageSrc: '/images/loans/vehicle-loan.jpg',
-      commonUses: ['New car purchase', 'Used vehicle', 'Two-wheeler', 'Commercial vehicle', 'Electric vehicle']
-    }
-  ];
-
-  const handleContinue = () => {
-    if (selectedLoan) {
-      router.push(`/loan-application/${selectedLoan}`);
+  const loanType = params.type as string;
+  
+  const [stage, setStage] = useState<'intro' | 'verification' | 'question' | 'processing' | 'complete'>('intro');
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [recordings, setRecordings] = useState<Blob[]>([]);
+  const [introCompleted, setIntroCompleted] = useState(false);
+  
+  // Fallback to personal loan if type is invalid
+  const loanData = loanTypeData[loanType as keyof typeof loanTypeData] || loanTypeData.personal;
+  
+  // Handle intro video completion
+  const handleIntroEnded = () => {
+    setIntroCompleted(true);
+    setStage('verification');
+  };
+  
+  // Handle recording completion
+  const handleRecordingComplete = (videoBlob: Blob) => {
+    setRecordings([...recordings, videoBlob]);
+    
+    // Move to next question or complete
+    if (currentQuestion < loanData.questions.length - 1) {
+      setCurrentQuestion(currentQuestion + 1);
+    } else {
+      setStage('processing');
+      
+      // Simulate processing and completion
+      setTimeout(() => {
+        setStage('complete');
+      }, 3000);
     }
   };
-
+  
+  // Handle return to dashboard
+  const handleReturnToDashboard = () => {
+    router.push('/dashboard');
+  };
+  
+  // Handle go to next application step
+  const handleContinueApplication = () => {
+    router.push(`/loan-application/${loanType}/details`);
+  };
+  
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <main className="flex-grow container mx-auto px-4 py-8">
-        <div className="max-w-5xl mx-auto">
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="container mx-auto px-4">
+        <div className="max-w-4xl mx-auto">
           <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8">
             <div className="bg-blue-600 p-6">
-              <h1 className="text-2xl md:text-3xl font-bold text-white">Apply for a Loan</h1>
+              <h1 className="text-2xl md:text-3xl font-bold text-white">{loanData.title} Application</h1>
               <p className="text-blue-100 mt-2">
-                Select the type of loan that best suits your needs
+                AI-Assisted Verification Process
               </p>
             </div>
             
             <div className="p-6">
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
-                {loanOptions.map((loan) => (
-                  <div 
-                    key={loan.type}
-                    className={`border rounded-xl p-4 cursor-pointer transition-all hover:shadow-md ${
-                      selectedLoan === loan.type 
-                        ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-500 ring-opacity-50' 
-                        : 'border-gray-200'
-                    }`}
-                    onClick={() => setSelectedLoan(loan.type)}
-                  >
-                    <div className="bg-blue-100 rounded-lg h-32 mb-4 overflow-hidden relative">
-                      {/* Replace with actual image or fallback to a placeholder */}
-                      <div className="w-full h-full bg-blue-200 flex items-center justify-center">
-                        <span className="text-blue-800 font-medium">{loan.title}</span>
-                      </div>
-                    </div>
-                    
-                    <h3 className="text-lg font-semibold text-gray-900 mb-1">{loan.title}</h3>
-                    <p className="text-sm text-gray-600 mb-2">{loan.description}</p>
-                    
-                    <div className="space-y-1 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Amount</span>
-                        <span className="font-medium">₹{loan.minAmount.toLocaleString('en-IN')} - ₹{loan.maxAmount.toLocaleString('en-IN')}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Interest Rate</span>
-                        <span className="font-medium">{loan.interestRate}</span>
-                      </div>
-                    </div>
+              {stage === 'intro' && (
+                <div className="space-y-6">
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <p className="text-blue-800">
+                      {loanData.welcomeMessage}
+                    </p>
                   </div>
-                ))}
-              </div>
-              
-              {selectedLoan && (
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
-                  <h3 className="font-medium text-gray-800 mb-2">
-                    Common uses for {loanOptions.find(l => l.type === selectedLoan)?.title}
-                  </h3>
-                  <ul className="grid grid-cols-2 gap-2 text-sm">
-                    {loanOptions.find(l => l.type === selectedLoan)?.commonUses.map((use, index) => (
-                      <li key={index} className="flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                        {use}
-                      </li>
-                    ))}
-                  </ul>
+                  
+                  <div className="aspect-video bg-black rounded-lg overflow-hidden">
+                    {/* Fallback to a message if video doesn't exist */}
+                    {loanData.introVideo ? (
+                      <VideoPlayer 
+                        videoSrc={loanData.introVideo} 
+                        autoPlay={true} 
+                        onEnded={handleIntroEnded}
+                        title="AI Branch Manager Introduction"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-blue-900 text-white p-8 text-center">
+                        <div>
+                          <h3 className="text-xl font-bold mb-4">Welcome to your {loanData.title} Application</h3>
+                          <p>Our AI branch manager will guide you through the verification process.</p>
+                          <button 
+                            onClick={handleIntroEnded}
+                            className="mt-6 bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg"
+                          >
+                            Continue to Verification
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {introCompleted && (
+                    <div className="flex justify-center">
+                      <button
+                        onClick={() => setStage('verification')}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg"
+                      >
+                        Begin Verification
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
               
-              <div className="flex justify-between items-center">
-                <Link 
-                  href="/dashboard" 
-                  className="text-blue-600 hover:text-blue-800 font-medium flex items-center"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
-                  </svg>
-                  Back to Dashboard
-                </Link>
-                <button
-                  className={`px-6 py-2 rounded-lg font-medium ${
-                    selectedLoan 
-                      ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                  }`}
-                  disabled={!selectedLoan}
-                  onClick={handleContinue}
-                >
-                  Continue
-                </button>
-              </div>
+              {stage === 'verification' && (
+                <VideoRecorder
+                  onRecordingComplete={handleRecordingComplete}
+                  maxDurationSeconds={60}
+                  questionText={loanData.questions[currentQuestion]}
+                  questionVideoSrc={`/videos/${loanType}-question-${currentQuestion + 1}.mp4`}
+                />
+              )}
+              
+              {stage === 'processing' && (
+                <div className="py-12 text-center">
+                  <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                  <h3 className="text-xl font-semibold text-gray-800 mb-2">Processing Your Verification</h3>
+                  <p className="text-gray-600">Please wait while our AI system verifies your information...</p>
+                </div>
+              )}
+              
+              {stage === 'complete' && (
+                <div className="py-8 text-center">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-800 mb-2">Verification Complete!</h3>
+                  <p className="text-gray-600 mb-6">Your identity and information have been successfully verified.</p>
+                  
+                  <div className="flex justify-center space-x-4">
+                    <button
+                      onClick={handleReturnToDashboard}
+                      className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-md"
+                    >
+                      Return to Dashboard
+                    </button>
+                    <button
+                      onClick={handleContinueApplication}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md"
+                    >
+                      Continue Application
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           
           <div className="bg-white rounded-xl shadow-md overflow-hidden">
             <div className="p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Important Information</h2>
-              <div className="space-y-4 text-sm text-gray-600">
-                <p>
-                  <strong>Eligibility:</strong> Loan approval is subject to the applicant's credit history, 
-                  repayment capacity, and documentation verification.
-                </p>
-                <p>
-                  <strong>Processing Time:</strong> Application processing typically takes 2-3 business days 
-                  after all required documents are submitted.
-                </p>
-                <p>
-                  <strong>Documentation:</strong> You will need to provide identification proof, address proof, 
-                  income proof, and other documents depending on the loan type.
-                </p>
-                <p>
-                  <strong>Disbursement:</strong> Approved loan amounts will be transferred to your registered 
-                  bank account within 24 hours of final approval.
-                </p>
-              </div>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Verification Process Steps</h2>
+              <ol className="space-y-3 text-sm text-gray-600">
+                <li className="flex items-start">
+                  <span className="bg-blue-100 text-blue-800 rounded-full w-6 h-6 flex items-center justify-center mr-2 flex-shrink-0">1</span>
+                  <span>Watch the AI Branch Manager's introduction and guidance</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="bg-blue-100 text-blue-800 rounded-full w-6 h-6 flex items-center justify-center mr-2 flex-shrink-0">2</span>
+                  <span>Complete the video verification by showing your ID and required documents</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="bg-blue-100 text-blue-800 rounded-full w-6 h-6 flex items-center justify-center mr-2 flex-shrink-0">3</span>
+                  <span>Answer all verification questions via video recording</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="bg-blue-100 text-blue-800 rounded-full w-6 h-6 flex items-center justify-center mr-2 flex-shrink-0">4</span>
+                  <span>Wait for AI verification to complete</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="bg-blue-100 text-blue-800 rounded-full w-6 h-6 flex items-center justify-center mr-2 flex-shrink-0">5</span>
+                  <span>Continue with your loan application</span>
+                </li>
+              </ol>
             </div>
             
             <div className="bg-blue-50 p-6 border-t border-blue-100">
@@ -201,13 +244,13 @@ export default function LoanApplicationPage() {
                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9a1 1 0 00-1-1z" clipRule="evenodd" />
                 </svg>
                 <p>
-                  Need assistance? Contact our support team at <span className="font-medium">support@aibankmanager.com</span> or call <span className="font-medium">1800-123-4567</span>
+                  Your privacy is important to us. All recorded videos are encrypted and will only be used for verification purposes.
                 </p>
               </div>
             </div>
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

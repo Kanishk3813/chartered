@@ -3,8 +3,6 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
 
 interface LoanDetails {
   id: string;
@@ -83,14 +81,12 @@ export default function EligibilityResultPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header />
         <div className="container mx-auto p-6 flex items-center justify-center min-h-[calc(100vh-200px)]">
           <div className="text-center">
             <div className="w-16 h-16 border-4 border-t-blue-600 border-blue-200 rounded-full animate-spin mx-auto mb-4"></div>
             <h2 className="text-xl font-semibold text-gray-700">Retrieving your loan application details...</h2>
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
@@ -98,7 +94,6 @@ export default function EligibilityResultPage() {
   if (!loanDetails) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header />
         <div className="container mx-auto p-6 flex items-center justify-center min-h-[calc(100vh-200px)]">
           <div className="text-center max-w-lg bg-white p-8 rounded-lg shadow-md">
             <div className="text-red-500 text-5xl mb-4">❌</div>
@@ -109,7 +104,6 @@ export default function EligibilityResultPage() {
             </Link>
           </div>
         </div>
-        <Footer />
       </div>
     );
   }

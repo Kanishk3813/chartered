@@ -3,7 +3,7 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import Webcam from 'react-webcam';
-import * as faceapi from 'face-api.js';
+import FaceDetection from './FaceDetection';
 
 interface VideoRecorderProps {
   onRecordingComplete: (videoBlob: Blob) => void;
@@ -24,28 +24,10 @@ export default function VideoRecorder({
   const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
   const [countdown, setCountdown] = useState(maxDurationSeconds);
   const [faceDetected, setFaceDetected] = useState(false);
-  const [modelsLoaded, setModelsLoaded] = useState(false);
   const [cameraPermission, setCameraPermission] = useState<boolean | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isQuestionPlayed, setIsQuestionPlayed] = useState(false);
-
-  // Load face-api models
-  useEffect(() => {
-    const loadModels = async () => {
-      const MODEL_URL = '/models';
-      try {
-        await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-        ]);
-        setModelsLoaded(true);
-      } catch (error) {
-        console.error('Error loading face detection models:', error);
-      }
-    };
-    loadModels();
-  }, []);
 
   // Request camera permission
   useEffect(() => {
@@ -61,26 +43,10 @@ export default function VideoRecorder({
     getCameraPermission();
   }, []);
 
-  // Face detection
-  useEffect(() => {
-    if (!modelsLoaded || !webcamRef.current || !webcamRef.current.video) return;
-
-    const detectFace = async () => {
-      if (webcamRef.current && webcamRef.current.video) {
-        const video = webcamRef.current.video;
-        if (video.readyState === 4) {
-          const detections = await faceapi.detectAllFaces(
-            video,
-            new faceapi.TinyFaceDetectorOptions()
-          );
-          setFaceDetected(detections.length > 0);
-        }
-      }
-    };
-
-    const interval = setInterval(detectFace, 1000);
-    return () => clearInterval(interval);
-  }, [modelsLoaded]);
+  // Handle face detection status
+  const handleFaceDetected = useCallback((detected: boolean) => {
+    setFaceDetected(detected);
+  }, []);
 
   // Countdown timer
   useEffect(() => {
@@ -261,24 +227,26 @@ export default function VideoRecorder({
                   mirrored
                 />
                 
+                {webcamRef.current && webcamRef.current.video && (
+                  <FaceDetection 
+                    videoElement={webcamRef.current.video}
+                    onFaceDetected={handleFaceDetected}
+                    drawLandmarks={true}
+                    highlightFace={true}
+                  />
+                )}
+                
                 {/* Face detection indicator */}
                 <div className="absolute top-4 right-4 bg-black bg-opacity-50 p-2 rounded-full text-white text-sm">
-                  {modelsLoaded ? (
-                    faceDetected ? (
-                      <span className="flex items-center">
-                        <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-                        Face Detected
-                      </span>
-                    ) : (
-                      <span className="flex items-center">
-                        <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
-                        No Face Detected
-                      </span>
-                    )
+                  {faceDetected ? (
+                    <span className="flex items-center">
+                      <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                      Face Detected
+                    </span>
                   ) : (
                     <span className="flex items-center">
-                      <div className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
-                      Loading...
+                      <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                      No Face Detected
                     </span>
                   )}
                 </div>
@@ -303,10 +271,10 @@ export default function VideoRecorder({
                 ) : (
                   <button
                     onClick={handleStartCapture}
-                    disabled={!modelsLoaded || !faceDetected || (!isQuestionPlayed && !!questionVideoSrc)}
+                    disabled={!faceDetected || (!isQuestionPlayed && !!questionVideoSrc)}
                     className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md disabled:bg-gray-400 disabled:cursor-not-allowed"
                   >
-                    {!modelsLoaded ? 'Loading...' : !faceDetected ? 'Face Not Detected' : !isQuestionPlayed && questionVideoSrc ? 'Watch Question First' : 'Start Recording'}
+                    {!faceDetected ? 'Face Not Detected' : !isQuestionPlayed && questionVideoSrc ? 'Watch Question First' : 'Start Recording'}
                   </button>
                 )}
               </div>

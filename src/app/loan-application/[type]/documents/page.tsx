@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Footer from '@/components/layout/Footer';
 
 // Interface for document state
 interface DocumentState {

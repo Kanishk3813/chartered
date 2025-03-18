@@ -7,9 +7,16 @@ import * as faceapi from 'face-api.js';
 interface FaceDetectionProps {
   videoElement: HTMLVideoElement | null;
   onFaceDetected?: (detected: boolean) => void;
+  drawLandmarks?: boolean;
+  highlightFace?: boolean;
 }
 
-export default function FaceDetection({ videoElement, onFaceDetected }: FaceDetectionProps) {
+export default function FaceDetection({ 
+  videoElement, 
+  onFaceDetected,
+  drawLandmarks = true,
+  highlightFace = true
+}: FaceDetectionProps) {
   const [isReady, setIsReady] = useState(false);
   const [faceDetected, setFaceDetected] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -25,6 +32,7 @@ export default function FaceDetection({ videoElement, onFaceDetected }: FaceDete
           faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
         ]);
         setIsReady(true);
+        console.log('Face detection models loaded successfully');
       } catch (error) {
         console.error('Error loading face detection models:', error);
       }
@@ -44,33 +52,58 @@ export default function FaceDetection({ videoElement, onFaceDetected }: FaceDete
     if (!isReady || !videoElement || !canvasRef.current) return;
     
     const canvas = canvasRef.current;
-    const displaySize = { width: videoElement.width, height: videoElement.height };
+    const displaySize = { 
+      width: videoElement.videoWidth || videoElement.clientWidth, 
+      height: videoElement.videoHeight || videoElement.clientHeight 
+    };
     faceapi.matchDimensions(canvas, displaySize);
     
     // Setup interval for face detection
     detectionInterval.current = setInterval(async () => {
       if (videoElement.paused || videoElement.ended) return;
       
-      const detections = await faceapi
-        .detectAllFaces(videoElement, new faceapi.TinyFaceDetectorOptions())
-        .withFaceLandmarks();
-      
-      const resizedDetections = faceapi.resizeResults(detections, displaySize);
-      canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height);
-      
-      if (resizedDetections.length > 0) {
-        faceapi.draw.drawDetections(canvas, resizedDetections);
-        faceapi.draw.drawFaceLandmarks(canvas, resizedDetections);
+      try {
+        const detections = await faceapi
+          .detectAllFaces(videoElement, new faceapi.TinyFaceDetectorOptions())
+          .withFaceLandmarks();
         
-        if (!faceDetected) {
-          setFaceDetected(true);
-          if (onFaceDetected) onFaceDetected(true);
+        const resizedDetections = faceapi.resizeResults(detections, displaySize);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        if (resizedDetections.length > 0) {
+          if (highlightFace) {
+            faceapi.draw.drawDetections(canvas, resizedDetections);
+          }
+          
+          if (drawLandmarks) {
+            faceapi.draw.drawFaceLandmarks(canvas, resizedDetections);
+          }
+          
+          // Draw success rectangle
+          ctx.strokeStyle = '#22c55e'; // Green color
+          ctx.lineWidth = 3;
+          ctx.strokeRect(0, 0, canvas.width, canvas.height);
+          
+          if (!faceDetected) {
+            setFaceDetected(true);
+            if (onFaceDetected) onFaceDetected(true);
+          }
+        } else {
+          // Draw warning rectangle when no face detected
+          ctx.strokeStyle = '#ef4444'; // Red color
+          ctx.lineWidth = 3;
+          ctx.strokeRect(0, 0, canvas.width, canvas.height);
+          
+          if (faceDetected) {
+            setFaceDetected(false);
+            if (onFaceDetected) onFaceDetected(false);
+          }
         }
-      } else {
-        if (faceDetected) {
-          setFaceDetected(false);
-          if (onFaceDetected) onFaceDetected(false);
-        }
+      } catch (error) {
+        console.error('Face detection error:', error);
       }
     }, 100);
     
@@ -79,7 +112,7 @@ export default function FaceDetection({ videoElement, onFaceDetected }: FaceDete
         clearInterval(detectionInterval.current);
       }
     };
-  }, [isReady, videoElement, onFaceDetected, faceDetected]);
+  }, [isReady, videoElement, onFaceDetected, faceDetected, drawLandmarks, highlightFace]);
 
   return (
     <canvas 
